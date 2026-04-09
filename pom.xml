@@ -18,9 +18,9 @@
 
     <repositories>
         <repository>
-            <id>nexus-aliyun</id>
-            <name>Nexus aliyun</name>
-            <url>https://maven.aliyun.com/repository/public</url>
+            <id>central</id>
+            <name>Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
             <layout>default</layout>
             <snapshots>
                 <enabled>false</enabled>
@@ -37,9 +37,9 @@
 
     <pluginRepositories>
         <pluginRepository>
-            <id>nexus-aliyun</id>
-            <name>Nexus aliyun</name>
-            <url>https://maven.aliyun.com/repository/public</url>
+            <id>central</id>
+            <name>Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
