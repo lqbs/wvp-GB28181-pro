@@ -1,4 +1,4 @@
-FROM ringcentral/jdk:11 AS builder
+FROM ringcentral/jdk:17.0.17 AS builder
 
 EXPOSE 18978/tcp
 EXPOSE 8116/tcp
@@ -56,7 +56,7 @@ COPY . /build
 WORKDIR /build
 RUN ls && mvn clean package -Dmaven.test.skip=true
 WORKDIR /build/target
-#确保文件名一致
+#确锟斤拷锟侥硷拷锟斤拷一锟斤拷
 RUN mv wvp-pro-*.jar wvp.jar
 
 
