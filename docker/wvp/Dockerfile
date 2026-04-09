@@ -60,7 +60,7 @@ WORKDIR /build/target
 RUN mv wvp-pro-*.jar wvp.jar
 
 
-FROM ringcentral/jdk:11
+FROM ringcentral/jdk:17.0.17
 RUN mkdir -p /opt/wvp
 WORKDIR /opt/wvp
 COPY --from=builder /build/target /opt/wvp
