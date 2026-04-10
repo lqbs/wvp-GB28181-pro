@@ -23,6 +23,8 @@ public interface CloudRecordServiceMapper {
             " file_path," +
             " file_size," +
             " server_id," +
+            " upload_status," +
+            " oss_url," +
             " time_len ) " +
             "VALUES (" +
             " #{app}," +
@@ -36,6 +38,8 @@ public interface CloudRecordServiceMapper {
             " #{filePath}," +
             " #{fileSize}," +
             " #{serverId}," +
+            " #{uploadStatus}," +
+            " #{ossUrl}," +
             " #{timeLen})" +
             " </script>")
     int add(CloudRecordItem cloudRecordItem);
@@ -169,4 +173,10 @@ public interface CloudRecordServiceMapper {
             " <if test= 'callId != null '> and call_id=#{callId}</if>" +
             " </script>")
     List<CloudRecordItem> queryRecordByAppStreamAndCallId(String app, String stream, String callId);
+    @Select("select * from wvp_cloud_record where upload_status = #{uploadStatus} limit #{limit}")
+    List<CloudRecordItem> queryListByUploadStatus(int uploadStatus, int limit);
+
+    @Update("update wvp_cloud_record set upload_status = #{uploadStatus}, oss_url = #{ossUrl} where id = #{id}")
+    int updateUploadStatusAndOssUrl(int id, int uploadStatus, String ossUrl);
+
 }

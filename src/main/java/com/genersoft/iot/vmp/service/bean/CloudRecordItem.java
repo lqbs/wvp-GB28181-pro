@@ -87,6 +87,16 @@ public class CloudRecordItem {
      */
     private String serverId;
 
+    /**
+     * 上传状态：0-未上传，1-上传中，2-已上传，3-上传失败
+     */
+    private int uploadStatus;
+
+    /**
+     * OSS访问链接或对象Key
+     */
+    private String ossUrl;
+
     public static CloudRecordItem getInstance(MediaRecordMp4Event param) {
         CloudRecordItem cloudRecordItem = new CloudRecordItem();
         cloudRecordItem.setApp(param.getApp());
