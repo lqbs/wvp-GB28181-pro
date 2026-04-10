@@ -66,6 +66,8 @@ public class OssUploadEventListener {
             return;
         }
 
+        log.info("[OSS上传] 视频URL: {}", downloadUrl);
+
         OSS ossClient = null;
         try {
             // 通过HTTP GET获取视频流
