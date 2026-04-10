@@ -87,6 +87,16 @@ public class CloudRecordItem {
      */
     private String serverId;
 
+    /**
+     * 阿里云OSS上传状态 0-未上传 1-上传中 2-上传成功 3-上传失败
+     */
+    private Integer uploadStatus;
+
+    /**
+     * 阿里云OSS地址
+     */
+    private String ossUrl;
+
     public static CloudRecordItem getInstance(MediaRecordMp4Event param) {
         CloudRecordItem cloudRecordItem = new CloudRecordItem();
         cloudRecordItem.setApp(param.getApp());
@@ -98,7 +108,7 @@ public class CloudRecordItem {
         cloudRecordItem.setFilePath(param.getRecordInfo().getFilePath());
         cloudRecordItem.setMediaServerId(param.getMediaServer().getId());
         cloudRecordItem.setTimeLen(param.getRecordInfo().getTimeLen());
-        cloudRecordItem.setEndTime((param.getRecordInfo().getStartTime() + (long)param.getRecordInfo().getTimeLen()));
+        cloudRecordItem.setEndTime((param.getRecordInfo().getStartTime() + (long) param.getRecordInfo().getTimeLen()));
         Map<String, String> paramsMap = MediaServerUtils.urlParamToMap(param.getRecordInfo().getParams());
         if (paramsMap.get("callId") != null) {
             cloudRecordItem.setCallId(paramsMap.get("callId"));

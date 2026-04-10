@@ -679,7 +679,9 @@ create table IF NOT EXISTS wvp_cloud_record
     file_path       character varying(500),
     collect         bool default false,
     file_size       int8,
-    time_len        double precision
+    time_len        double precision,
+    upload_status   int default 0,
+    oss_url         character varying(500)
 );
 COMMENT ON TABLE wvp_cloud_record IS '云端录像记录';
 COMMENT ON COLUMN wvp_cloud_record.id IS '主键ID';

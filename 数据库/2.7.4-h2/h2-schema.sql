@@ -351,7 +351,9 @@ create table IF NOT EXISTS wvp_cloud_record
     file_path       character varying(500),
     collect         bool default false,
     file_size       bigint,
-    time_len        double precision
+    time_len        double precision,
+    upload_status   int default 0,
+    oss_url         character varying(500)
 );
 
 create table IF NOT EXISTS wvp_user

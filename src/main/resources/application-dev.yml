@@ -109,4 +109,8 @@ user-settings:
   stream-on-demand: true
   # 是否返回Date属性，true：不返回，避免摄像头通过该参数自动校时，false：返回，摄像头可能会根据该时间校时
   disable-date-header: false
-
+oss:
+  accessKeyId: ACCESS_KEY_HERE
+  accessKeySecret: ACCESS_KEY_HERE
+  endpoint: oss-cn-hangzhou.aliyuncs.com # 示例地址，请根据实际地域填写
+  bucketName: hmpic

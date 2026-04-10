@@ -381,7 +381,9 @@ create table IF NOT EXISTS wvp_cloud_record
     file_path       character varying(500) COMMENT '完整路径',
     collect         bool default false COMMENT '是否收藏',
     file_size       bigint COMMENT '文件大小',
-    time_len        double precision COMMENT '时长'
+    time_len        double precision COMMENT '时长',
+    upload_status   int default 0 COMMENT '上传状态',
+    oss_url         character varying(500) COMMENT 'OSS地址'
 );
 
 -- 平台用户信息
