@@ -45,6 +45,7 @@ public class OssUploadEventListener {
         String app = event.getApp();
         String stream = event.getStream();
         String fileName = recordInfo.getFileName();
+        String filePath = recordInfo.getFilePath();
 
         log.info("[OSS上传] 开始处理上传任务: {}/{}/{}", app, stream, fileName);
 
@@ -59,7 +60,7 @@ public class OssUploadEventListener {
         cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 1, null);
         String ip = "121.43.133.173";
         String downloadUrl = String.format("http://%s:8080/mediaserver/api/downloadFile?file_path=%s",
-                ip, "/" + app + "/" + stream + "/" + fileName);
+                ip, filePath);
         if (!StringUtils.hasText(downloadUrl)) {
             log.error("[OSS上传] 无法获取下载地址: {}/{}/{}", app, stream, fileName);
             cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 3, null);
