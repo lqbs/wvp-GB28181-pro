@@ -4,11 +4,9 @@ import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.genersoft.iot.vmp.conf.OssConfig;
-import com.genersoft.iot.vmp.media.bean.MediaServer;
 import com.genersoft.iot.vmp.media.bean.RecordInfo;
 import com.genersoft.iot.vmp.media.event.media.MediaRecordMp4Event;
 import com.genersoft.iot.vmp.media.service.IMediaServerService;
-import com.genersoft.iot.vmp.service.bean.DownloadFileInfo;
 import com.genersoft.iot.vmp.storager.dao.CloudRecordServiceMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -31,9 +29,6 @@ public class OssUploadEventListener {
     private OssConfig ossConfig;
 
     @Autowired
-    private IMediaServerService mediaServerService;
-
-    @Autowired
     private CloudRecordServiceMapper cloudRecordServiceMapper;
 
     private final OkHttpClient client = new OkHttpClient();
@@ -47,7 +42,6 @@ public class OssUploadEventListener {
         }
 
         RecordInfo recordInfo = event.getRecordInfo();
-        MediaServer mediaServer = event.getMediaServer();
         String app = event.getApp();
         String stream = event.getStream();
         String fileName = recordInfo.getFileName();
@@ -63,9 +57,9 @@ public class OssUploadEventListener {
 
         // 更新状态为上传中
         cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 1, null);
-
-        DownloadFileInfo downloadFileInfo = mediaServerService.getDownloadFilePath(mediaServer, recordInfo);
-        String downloadUrl = downloadFileInfo.getHttpPath();
+        String ip = "121.43.133.173";
+        String downloadUrl = String.format("http://%s:8080/mediaserver/api/downloadFile?file_path=%s",
+                ip, "/" + app + "/" + stream + "/" + fileName);
         if (!StringUtils.hasText(downloadUrl)) {
             log.error("[OSS上传] 无法获取下载地址: {}/{}/{}", app, stream, fileName);
             cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 3, null);
