@@ -2,6 +2,7 @@ package com.genersoft.iot.vmp.media.zlm.listener;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.genersoft.iot.vmp.conf.VideoReceiveConfig;
+import com.genersoft.iot.vmp.media.bean.MediaServer;
 import com.genersoft.iot.vmp.media.bean.RecordInfo;
 import com.genersoft.iot.vmp.media.service.IMediaServerService;
 import com.genersoft.iot.vmp.media.event.media.MediaRecordMp4Event;
@@ -71,8 +72,18 @@ public class OssUploadEventListener {
 
         cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 1, null);
 
-        String ip = "121.43.133.173";
-        String downloadUrl = String.format("http://%s:8080/mediaserver/api/downloadFile?file_path=%s", ip, filePath);
+        MediaServer mediaServer = event.getMediaServer();
+        if (mediaServer == null) {
+            log.error("[OSS上传] 缺少MediaServer信息，无法构建下载URL");
+            cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 3, null);
+            return;
+        }
+
+        String downloadUrl = String.format("http://%s:%s/index/api/downloadFile?file_path=%s", mediaServer.getIp(),
+                mediaServer.getHttpPort(), filePath);
+        if (StringUtils.hasText(mediaServer.getSecret())) {
+            downloadUrl += "&secret=" + mediaServer.getSecret();
+        }
         log.info("[OSS上传] 视频URL: {}", downloadUrl);
 
         File uploadFile = null;
