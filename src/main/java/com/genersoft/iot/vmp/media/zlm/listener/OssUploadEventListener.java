@@ -72,13 +72,15 @@ public class OssUploadEventListener {
         log.info("[OSS上传] 视频URL: {}", downloadUrl);
 
         File uploadFile = null;
+        File localFile = new File(filePath);
+        boolean localFileUsed = false;
         boolean tempFileCreated = false;
         try {
-            File localFile = new File(filePath);
             if (localFile.exists() && localFile.length() > 0) {
                 log.info("[OSS上传] 检测到本地文件，直接上传: {}, 大小: {} MB",
                         localFile.getAbsolutePath(), localFile.length() / 1024 / 1024);
                 uploadFile = localFile;
+                localFileUsed = true;
             } else {
                 uploadFile = downloadToTempFile(downloadUrl);
                 tempFileCreated = true;
@@ -91,7 +93,11 @@ public class OssUploadEventListener {
             log.info("[OSS上传] 分片上传完成, 耗时: {} 秒", (System.currentTimeMillis() - start) / 1000);
             log.info("[OSS上传] 成功上传至OSS: {}", ossUrl);
             cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 2, ossUrl);
-            notifyVideoReceive(fileName, ossUrl);
+            boolean notifySuccess = notifyVideoReceive(fileName, ossUrl);
+            if (notifySuccess && localFileUsed) {
+                log.info("[OSS上传] 上报成功，删除本地视频文件: {}", localFile.getAbsolutePath());
+                deleteQuietly(localFile);
+            }
 
         } catch (Throwable e) {
             log.error("[OSS上传] 上传至OSS失败", e);
@@ -103,10 +109,10 @@ public class OssUploadEventListener {
         }
     }
 
-    private void notifyVideoReceive(String fileName, String ossUrl) {
+    private boolean notifyVideoReceive(String fileName, String ossUrl) {
         if (!videoReceiveConfig.isEnabled() || !StringUtils.hasText(videoReceiveConfig.getUrl())) {
             log.debug("[视频回调] 未启用或未配置回调地址，忽略发送");
-            return;
+            return false;
         }
 
         String deviceCode = fileName;
@@ -125,12 +131,14 @@ public class OssUploadEventListener {
             if (!response.isSuccessful()) {
                 String responseBody = response.body() != null ? response.body().string() : "";
                 log.error("[视频回调] 调用失败, code: {}, body: {}", response.code(), responseBody);
-                return;
+                return false;
             }
             String responseBody = response.body() != null ? response.body().string() : "";
             log.info("[视频回调] 调用成功, deviceCode: {}, response: {}", deviceCode, responseBody);
+            return true;
         } catch (Exception e) {
             log.error("[视频回调] 调用异常, deviceCode: {}, videoUrl: {}", deviceCode, ossUrl, e);
+            return false;
         }
     }
 
