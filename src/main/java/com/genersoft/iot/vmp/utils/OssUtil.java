@@ -140,7 +140,7 @@ public class OssUtil {
     }
 
     public String buildObjectUrl(String objectName) {
-        return "https://" + ossConfig.getBucketName() + "." + getCleanEndpoint() + "/" + objectName;
+        return "https://" + ossConfig.getBucketName() + "." + getPublicCleanEndpoint() + "/" + objectName;
     }
 
     private ClientBuilderConfiguration buildClientConfiguration() {
@@ -158,6 +158,10 @@ public class OssUtil {
 
     private String getCleanEndpoint() {
         return getEndpoint().replaceFirst("^https?://", "");
+    }
+
+    private String getPublicCleanEndpoint() {
+        return getCleanEndpoint().replace("-internal.", ".");
     }
 
     private long calculatePartSize(long fileSize) {
