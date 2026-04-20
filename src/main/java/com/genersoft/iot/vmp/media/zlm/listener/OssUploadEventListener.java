@@ -1,17 +1,22 @@
 package com.genersoft.iot.vmp.media.zlm.listener;
 
+import com.alibaba.fastjson2.JSONObject;
+import com.genersoft.iot.vmp.conf.VideoReceiveConfig;
 import com.genersoft.iot.vmp.media.bean.RecordInfo;
 import com.genersoft.iot.vmp.media.event.media.MediaRecordMp4Event;
 import com.genersoft.iot.vmp.storager.dao.CloudRecordServiceMapper;
 import com.genersoft.iot.vmp.utils.OssUtil;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -21,11 +26,16 @@ import java.io.InputStream;
 @Component
 public class OssUploadEventListener {
 
+    private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json; charset=utf-8");
+
     @Autowired
     private OssUtil ossUtil;
 
     @Autowired
     private CloudRecordServiceMapper cloudRecordServiceMapper;
+
+    @Autowired
+    private VideoReceiveConfig videoReceiveConfig;
 
     private final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
@@ -81,6 +91,7 @@ public class OssUploadEventListener {
             log.info("[OSS上传] 分片上传完成, 耗时: {} 秒", (System.currentTimeMillis() - start) / 1000);
             log.info("[OSS上传] 成功上传至OSS: {}", ossUrl);
             cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 2, ossUrl);
+            notifyVideoReceive(fileName, ossUrl);
 
         } catch (Throwable e) {
             log.error("[OSS上传] 上传至OSS失败", e);
@@ -89,6 +100,37 @@ public class OssUploadEventListener {
             if (tempFileCreated) {
                 deleteQuietly(uploadFile);
             }
+        }
+    }
+
+    private void notifyVideoReceive(String fileName, String ossUrl) {
+        if (!videoReceiveConfig.isEnabled() || !StringUtils.hasText(videoReceiveConfig.getUrl())) {
+            log.debug("[视频回调] 未启用或未配置回调地址，忽略发送");
+            return;
+        }
+
+        String deviceCode = fileName;
+
+        JSONObject body = new JSONObject();
+        body.put("deviceCode", deviceCode);
+        body.put("videoUrl", ossUrl);
+        body.put("analysis", videoReceiveConfig.isAnalysis());
+
+        Request request = new Request.Builder()
+                .url(videoReceiveConfig.getUrl())
+                .post(RequestBody.create(body.toJSONString(), JSON_MEDIA_TYPE))
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String responseBody = response.body() != null ? response.body().string() : "";
+                log.error("[视频回调] 调用失败, code: {}, body: {}", response.code(), responseBody);
+                return;
+            }
+            String responseBody = response.body() != null ? response.body().string() : "";
+            log.info("[视频回调] 调用成功, deviceCode: {}, response: {}", deviceCode, responseBody);
+        } catch (Exception e) {
+            log.error("[视频回调] 调用异常, deviceCode: {}, videoUrl: {}", deviceCode, ossUrl, e);
         }
     }
 
