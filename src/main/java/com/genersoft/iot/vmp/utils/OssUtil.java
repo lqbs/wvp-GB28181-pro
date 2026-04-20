@@ -22,7 +22,7 @@ import java.io.File;
 @Component
 public class OssUtil {
 
-    private static final String DEFAULT_ENDPOINT = "oss-cn-hangzhou.aliyuncs.com";
+    private static final String DEFAULT_ENDPOINT = "oss-cn-hangzhou-internal.aliyuncs.com";
     private static final long MIN_PART_SIZE = 5L * 1024 * 1024;
     private static final long DEFAULT_PART_SIZE = 10L * 1024 * 1024;
     private static final int DEFAULT_TASK_NUM = 3;
@@ -115,7 +115,8 @@ public class OssUtil {
 
             UploadFileResult result = getOssClient().uploadFile(uploadFileRequest);
             String eTag = result != null && result.getMultipartUploadResult() != null
-                    ? result.getMultipartUploadResult().getETag() : "N/A";
+                    ? result.getMultipartUploadResult().getETag()
+                    : "N/A";
             log.info("[OSS上传] 分片上传成功，ETag: {}, checkpoint: {}", eTag, checkpointFile.getAbsolutePath());
             deleteQuietly(checkpointFile);
             return buildObjectUrl(objectName);

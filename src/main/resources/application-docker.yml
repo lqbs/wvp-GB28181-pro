@@ -80,5 +80,5 @@ user-settings:
 oss:
     accessKeyId: ACCESS_KEY_HERE
     accessKeySecret: ACCESS_KEY_HERE
-    endpoint: oss-cn-hangzhou.aliyuncs.com # 示例地址，请根据实际地域填写
+    endpoint: oss-cn-hangzhou-internal.aliyuncs.com # 示例地址，请根据实际地域填写
     bucketName: hoomi-media-server
