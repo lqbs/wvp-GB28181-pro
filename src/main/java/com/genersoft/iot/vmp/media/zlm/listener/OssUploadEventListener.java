@@ -106,7 +106,7 @@ public class OssUploadEventListener {
             log.info("[OSS上传] 上传完成, 耗时: {} 秒", (System.currentTimeMillis() - start) / 1000);
             log.info("[OSS上传] 成功上传至OSS: {}", ossUrl);
             cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 2, ossUrl);
-            boolean notifySuccess = notifyVideoReceive(fileName, ossUrl);
+            boolean notifySuccess = notifyVideoReceive(stream, ossUrl);
             if (notifySuccess) {
                 deleteRecordSourceFile(event, recordInfo);
             }
@@ -147,13 +147,13 @@ public class OssUploadEventListener {
         }
     }
 
-    private boolean notifyVideoReceive(String fileName, String ossUrl) {
+    private boolean notifyVideoReceive(String stream, String ossUrl) {
         if (!videoReceiveConfig.isEnabled() || !StringUtils.hasText(videoReceiveConfig.getUrl())) {
             log.debug("[视频回调] 未启用或未配置回调地址，忽略发送");
             return false;
         }
 
-        String deviceCode = fileName;
+        String deviceCode = stream;
 
         JSONObject body = new JSONObject();
         body.put("deviceCode", deviceCode);
