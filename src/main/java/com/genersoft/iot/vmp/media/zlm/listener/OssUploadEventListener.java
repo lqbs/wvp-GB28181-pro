@@ -3,6 +3,7 @@ package com.genersoft.iot.vmp.media.zlm.listener;
 import com.alibaba.fastjson2.JSONObject;
 import com.genersoft.iot.vmp.conf.VideoReceiveConfig;
 import com.genersoft.iot.vmp.media.bean.RecordInfo;
+import com.genersoft.iot.vmp.media.service.IMediaServerService;
 import com.genersoft.iot.vmp.media.event.media.MediaRecordMp4Event;
 import com.genersoft.iot.vmp.storager.dao.CloudRecordServiceMapper;
 import com.genersoft.iot.vmp.utils.OssUtil;
@@ -36,6 +37,9 @@ public class OssUploadEventListener {
 
     @Autowired
     private VideoReceiveConfig videoReceiveConfig;
+
+    @Autowired
+    private IMediaServerService mediaServerService;
 
     private final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
@@ -72,15 +76,13 @@ public class OssUploadEventListener {
         log.info("[OSS上传] 视频URL: {}", downloadUrl);
 
         File uploadFile = null;
-        File localFile = new File(filePath);
-        boolean localFileUsed = false;
         boolean tempFileCreated = false;
         try {
+            File localFile = new File(filePath);
             if (localFile.exists() && localFile.length() > 0) {
                 log.info("[OSS上传] 检测到本地文件，直接上传: {}, 大小: {} MB",
                         localFile.getAbsolutePath(), localFile.length() / 1024 / 1024);
                 uploadFile = localFile;
-                localFileUsed = true;
             } else {
                 uploadFile = downloadToTempFile(downloadUrl);
                 tempFileCreated = true;
@@ -94,9 +96,8 @@ public class OssUploadEventListener {
             log.info("[OSS上传] 成功上传至OSS: {}", ossUrl);
             cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 2, ossUrl);
             boolean notifySuccess = notifyVideoReceive(fileName, ossUrl);
-            if (notifySuccess && localFileUsed) {
-                log.info("[OSS上传] 上报成功，删除本地视频文件: {}", localFile.getAbsolutePath());
-                deleteQuietly(localFile);
+            if (notifySuccess) {
+                deleteRecordSourceFile(event, recordInfo);
             }
 
         } catch (Throwable e) {
@@ -106,6 +107,32 @@ public class OssUploadEventListener {
             if (tempFileCreated) {
                 deleteQuietly(uploadFile);
             }
+        }
+    }
+
+    private void deleteRecordSourceFile(MediaRecordMp4Event event, RecordInfo recordInfo) {
+        if (event.getMediaServer() == null || !StringUtils.hasText(recordInfo.getFilePath())) {
+            log.warn("[OSS上传] 删除录制视频源文件失败，缺少媒体节点或文件路径信息: {}", recordInfo.getFilePath());
+            return;
+        }
+
+        File sourceFile = new File(recordInfo.getFilePath());
+        File parentFile = sourceFile.getParentFile();
+        if (parentFile == null) {
+            log.warn("[OSS上传] 删除录制视频源文件失败，无法解析录像日期目录: {}", recordInfo.getFilePath());
+            return;
+        }
+
+        boolean deleteResult = mediaServerService.deleteRecordDirectory(
+                event.getMediaServer(),
+                event.getApp(),
+                event.getStream(),
+                parentFile.getName(),
+                recordInfo.getFileName());
+        if (deleteResult) {
+            log.info("[OSS上传] 删除录制视频源文件成功: {}", recordInfo.getFilePath());
+        } else {
+            log.warn("[OSS上传] 删除录制视频源文件失败: {}", recordInfo.getFilePath());
         }
     }
 
