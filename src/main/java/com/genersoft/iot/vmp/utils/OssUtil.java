@@ -48,8 +48,7 @@ public class OssUtil {
                             getEndpoint(),
                             ossConfig.getAccessKeyId(),
                             ossConfig.getAccessKeySecret(),
-                            buildClientConfiguration()
-                    );
+                            buildClientConfiguration());
                 }
             }
         }
@@ -98,10 +97,10 @@ public class OssUtil {
 
     private ClientBuilderConfiguration buildClientConfiguration() {
         ClientBuilderConfiguration conf = new ClientBuilderConfiguration();
-        conf.setSocketTimeout(5 * 60 * 1000);
-        conf.setConnectionTimeout(60 * 1000);
-        conf.setMaxErrorRetry(5);
-        conf.setConnectionRequestTimeout(60 * 1000);
+        conf.setSocketTimeout(60 * 1000); // 缩短Socket超时至1分钟
+        conf.setConnectionTimeout(10 * 1000); // 缩短连接超时至10秒
+        conf.setMaxErrorRetry(2); // 缩短重试次数至2次，避免因网络不通导致卡住过久
+        conf.setConnectionRequestTimeout(10 * 1000); // 缩短从连接池获取连接的超时至10秒
         return conf;
     }
 

@@ -100,10 +100,10 @@ public class OssUploadEventListener {
             }
 
             String objectName = ossUtil.buildRecordObjectName(app, stream, fileName);
-            log.info("[OSS上传] 开始分片上传到OSS: {}", objectName);
+            log.info("[OSS上传] 开始上传到OSS: {}", objectName);
             long start = System.currentTimeMillis();
             String ossUrl = ossUtil.uploadFile(uploadFile, objectName);
-            log.info("[OSS上传] 分片上传完成, 耗时: {} 秒", (System.currentTimeMillis() - start) / 1000);
+            log.info("[OSS上传] 上传完成, 耗时: {} 秒", (System.currentTimeMillis() - start) / 1000);
             log.info("[OSS上传] 成功上传至OSS: {}", ossUrl);
             cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 2, ossUrl);
             boolean notifySuccess = notifyVideoReceive(fileName, ossUrl);
