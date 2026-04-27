@@ -6,5 +6,5 @@ spring:
 
 video-receive:
   enabled: true
-  url: https://server-test.hoomi.cn/warehouse/sortingTask/weighingStation/video/receive
+  url: https://server-prod.hoomi.cn/warehouse/sortingTask/weighingStation/video/receive
   analysis: true
