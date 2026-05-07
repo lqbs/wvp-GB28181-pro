@@ -29,6 +29,7 @@ import java.io.InputStream;
 public class OssUploadEventListener {
 
     private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json; charset=utf-8");
+    private static final long MIN_UPLOAD_FILE_SIZE = 200L * 1024 * 1024;
 
     @Autowired
     private OssUtil ossUtil;
@@ -61,6 +62,12 @@ public class OssUploadEventListener {
         String fileName = recordInfo.getFileName();
         String filePath = recordInfo.getFilePath();
 
+        if (recordInfo.getFileSize() > 0 && recordInfo.getFileSize() < MIN_UPLOAD_FILE_SIZE) {
+            log.info("[OSS上传] 文件小于200MB，跳过上传: {}/{}/{}, 大小: {} MB",
+                    app, stream, fileName, recordInfo.getFileSize() / 1024 / 1024);
+            return;
+        }
+
         log.info("[OSS上传] 开始处理上传任务: {}/{}/{}", app, stream, fileName);
 
         try {
@@ -69,8 +76,6 @@ public class OssUploadEventListener {
             Thread.currentThread().interrupt();
             log.error("[OSS上传] 睡眠中断", e);
         }
-
-        cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 1, null);
 
         MediaServer mediaServer = event.getMediaServer();
         if (mediaServer == null) {
@@ -91,14 +96,25 @@ public class OssUploadEventListener {
         try {
             File localFile = new File(filePath);
             if (localFile.exists() && localFile.length() > 0) {
+                if (localFile.length() < MIN_UPLOAD_FILE_SIZE) {
+                    log.info("[OSS上传] 本地文件小于200MB，跳过上传: {}, 大小: {} MB",
+                            localFile.getAbsolutePath(), localFile.length() / 1024 / 1024);
+                    return;
+                }
                 log.info("[OSS上传] 检测到本地文件，直接上传: {}, 大小: {} MB",
                         localFile.getAbsolutePath(), localFile.length() / 1024 / 1024);
                 uploadFile = localFile;
             } else {
                 uploadFile = downloadToTempFile(downloadUrl);
                 tempFileCreated = true;
+                if (uploadFile.length() < MIN_UPLOAD_FILE_SIZE) {
+                    log.info("[OSS上传] 下载文件小于200MB，跳过上传: {}, 大小: {} MB",
+                            uploadFile.getAbsolutePath(), uploadFile.length() / 1024 / 1024);
+                    return;
+                }
             }
 
+            cloudRecordServiceMapper.updateOssInfo(app, stream, fileName, 1, null);
             String objectName = ossUtil.buildRecordObjectName(app, stream, fileName);
             log.info("[OSS上传] 开始分片上传到OSS(支持断点续传): {}", objectName);
             long start = System.currentTimeMillis();
