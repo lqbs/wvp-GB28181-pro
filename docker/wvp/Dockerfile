@@ -61,6 +61,9 @@ RUN mv wvp-pro-*.jar wvp.jar
 
 
 FROM ringcentral/jdk:17.0.17
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /opt/wvp
 WORKDIR /opt/wvp
 COPY --from=builder /build/target /opt/wvp
