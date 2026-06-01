@@ -136,10 +136,9 @@ public class OssUploadEventListener {
             log.info("[OSS上传] 上传完成, 耗时: {} 秒", (System.currentTimeMillis() - start) / 1000);
             log.info("[OSS上传] 成功上传至OSS: {}", ossUrl);
             updateOssInfo(app, stream, fileName, 2, ossUrl);
-            // 只有夜间完整文件上传完成后才进入视频分析回调，白天切片上传不触发分析。
-            boolean notifySuccess = uploadFileInfo.isNotifyVideoReceive() && notifyVideoReceive(stream, ossUrl);
-            if (notifySuccess) {
-                deleteRecordSourceFile(event, recordInfo);
+            // 视频回调独立执行，不再作为删除源文件的前置条件；删除统一放到 finally 处理。
+            if (uploadFileInfo.isNotifyVideoReceive()) {
+                notifyVideoReceive(stream, ossUrl);
             }
 
         } catch (Throwable e) {
@@ -151,6 +150,13 @@ public class OssUploadEventListener {
             }
             if (downloadedTempFile != null) {
                 deleteQuietly(downloadedTempFile);
+            }
+            // 无论任何情况（白天/夜间、上传成功/失败、回调成功/失败、小文件跳过等），
+            // 在最后一步始终调用 ZLM 接口删除媒体节点上的源录像文件。
+            try {
+                deleteRecordSourceFile(event, recordInfo);
+            } catch (Throwable e) {
+                log.warn("[OSS上传] finally 删除源录像文件异常: {}", recordInfo.getFilePath(), e);
             }
         }
     }
@@ -282,9 +288,11 @@ public class OssUploadEventListener {
     }
 
     /**
-     * 视频分析回调成功后，删除媒体节点上的源录像文件。
+     * 删除媒体节点上的源录像文件。
      *
-     * <p>白天切片上传不会触发视频分析回调，因此也不会走到这里删除源文件。
+     * <p>由 {@link #onApplicationEvent(MediaRecordMp4Event)} 的 finally 块统一调用，
+     * 无论上传成功失败、白天/夜间、回调是否成功，最终都会尝试删除源录像。
+     * <p>注：ABL 媒体节点尚未实现删除接口，将只记录 warn 日志而不真正删除。
      */
     private void deleteRecordSourceFile(MediaRecordMp4Event event, RecordInfo recordInfo) {
         if (event.getMediaServer() == null || !StringUtils.hasText(recordInfo.getFilePath())) {
