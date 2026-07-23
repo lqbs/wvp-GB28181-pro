@@ -123,7 +123,7 @@ public class OssUploadEventListener {
                 sourceFile = downloadedTempFile;
             }
 
-            UploadFileInfo uploadFileInfo = buildUploadFile(recordInfo, sourceFile);
+            UploadFileInfo uploadFileInfo = buildUploadFile(recordInfo, sourceFile, stream);
             if (uploadFileInfo == null) {
                 return;
             }
@@ -138,7 +138,7 @@ public class OssUploadEventListener {
             updateOssInfo(app, stream, fileName, 2, ossUrl);
             // 视频回调独立执行，不再作为删除源文件的前置条件；删除统一放到 finally 处理。
             if (uploadFileInfo.isNotifyVideoReceive()) {
-                notifyVideoReceive(stream, ossUrl);
+                notifyVideoReceive(stream, ossUrl, uploadFileInfo.isAnalysis());
             }
 
         } catch (Throwable e) {
@@ -189,14 +189,37 @@ public class OssUploadEventListener {
      *
      * @return 返回待上传文件及后续回调策略；返回 null 表示按业务规则跳过上传
      */
-    private UploadFileInfo buildUploadFile(RecordInfo recordInfo, File sourceFile) throws Exception {
+    private UploadFileInfo buildUploadFile(RecordInfo recordInfo, File sourceFile, String stream) throws Exception {
         int completeHour = getRecordCompleteHour(recordInfo);
+        
+        // 判断是否为车载设备：设备编号（取 stream 中 _ 前的部分）后三位 >= 110
+        String deviceCode = stream;
+        int underscoreIndex = stream.indexOf('_');
+        if (underscoreIndex > 0) {
+            deviceCode = stream.substring(0, underscoreIndex);
+        }
+        boolean isVehicle = false;
+        if (deviceCode.length() >= 3) {
+            String last3 = deviceCode.substring(deviceCode.length() - 3);
+            try {
+                isVehicle = Integer.parseInt(last3) > 110;
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        }
+
+        // 针对车载设备在 4~12 点之间的录像，上传完整文件，通知分析为 false
+        if (isVehicle && completeHour >= 4 && completeHour < 12) {
+            log.info("[OSS上传] 车载设备，文件生成完成时间小时为{}，上传完整文件并不触发分析: {}", completeHour, sourceFile.getAbsolutePath());
+            return new UploadFileInfo(sourceFile, true, false);
+        }
+
         // 白天生成完成的文件只上传前30分钟切片，避免完整文件进入OSS和分析流程。
         if (completeHour >= 2 && completeHour < 22) {
             File slicedFile = sliceFirstSeconds(sourceFile, recordInfo.getFileName(), DAYTIME_SLICE_SECONDS);
             log.info("[OSS上传] 文件生成完成时间小时为{}，上传前{}秒切片: {} -> {}",
                     completeHour, DAYTIME_SLICE_SECONDS, sourceFile.getAbsolutePath(), slicedFile.getAbsolutePath());
-            return new UploadFileInfo(slicedFile, false);
+            return new UploadFileInfo(slicedFile, false, false);
         }
         log.info("[OSS上传] 文件生成完成时间小时为{}，夜间时段上传完整文件: {}", completeHour, sourceFile.getAbsolutePath());
         // 夜间完整文件保留100MB门槛，达到门槛后上传并触发视频分析回调。
@@ -205,7 +228,7 @@ public class OssUploadEventListener {
                     sourceFile.getAbsolutePath(), sourceFile.length() / 1024 / 1024);
             return null;
         }
-        return new UploadFileInfo(sourceFile, true);
+        return new UploadFileInfo(sourceFile, true, true);
     }
 
     /**
@@ -217,10 +240,12 @@ public class OssUploadEventListener {
     private static class UploadFileInfo {
         private final File file;
         private final boolean notifyVideoReceive;
+        private final boolean analysis;
 
-        private UploadFileInfo(File file, boolean notifyVideoReceive) {
+        private UploadFileInfo(File file, boolean notifyVideoReceive, boolean analysis) {
             this.file = file;
             this.notifyVideoReceive = notifyVideoReceive;
+            this.analysis = analysis;
         }
 
         public File getFile() {
@@ -229,6 +254,10 @@ public class OssUploadEventListener {
 
         public boolean isNotifyVideoReceive() {
             return notifyVideoReceive;
+        }
+
+        public boolean isAnalysis() {
+            return analysis;
         }
     }
 
@@ -325,7 +354,7 @@ public class OssUploadEventListener {
      *
      * <p>调用方会控制触发条件：只有夜间完整文件成功上传 OSS 后才调用此方法。
      */
-    private boolean notifyVideoReceive(String stream, String ossUrl) {
+    private boolean notifyVideoReceive(String stream, String ossUrl, boolean analysis) {
         if (!videoReceiveConfig.isEnabled() || !StringUtils.hasText(videoReceiveConfig.getUrl())) {
             log.debug("[视频回调] 未启用或未配置回调地址，忽略发送");
             return false;
@@ -336,7 +365,7 @@ public class OssUploadEventListener {
         JSONObject body = new JSONObject();
         body.put("deviceCode", deviceCode);
         body.put("videoUrl", ossUrl);
-        body.put("analysis", videoReceiveConfig.isAnalysis());
+        body.put("analysis", analysis);
 
         Request request = new Request.Builder()
                 .url(videoReceiveConfig.getUrl())
